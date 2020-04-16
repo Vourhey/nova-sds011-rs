@@ -1,0 +1,14 @@
+[package]
+name = "sds011"
+version = "0.1.0"
+authors = ["Vadim Manaenko <vadim.razorq@gmail.com>"]
+edition = "2018"
+
+[[bin]]
+name = "sds011"
+
+[dependencies]
+serialport = "3.3.0"
+serde = { version = "1.0.106", features = ["derive"] }
+
+clap = "2.33.0"
