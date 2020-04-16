@@ -2,6 +2,9 @@
 name = "sds011"
 version = "0.1.0"
 authors = ["Vadim Manaenko <vadim.razorq@gmail.com>"]
+description = "SDS011 driver"
+license-file = "LICENSE"
+repository = "https://github.com/Vourhey/nova-sds011-rs"
 edition = "2018"
 
 [[bin]]
