@@ -71,7 +71,13 @@ pub struct Message {
 }
 
 impl SDS011 {
-
+    /// Creates new instance of SDS011
+    /// `port` is required, for example `/dev/ttyUSB0`
+    ///
+    /// # Example
+    /// ```
+    /// let mut sensor = SDS011::new("/dev/ttyUSB0").unwrap();
+    /// ```
     pub fn new(port: &str) -> Result<SDS011, Error> {
         let s = SerialPortSettings {
             baud_rate: 9600,
@@ -93,6 +99,8 @@ impl SDS011 {
         }
     }
 
+    /// Sets report mode
+    /// TODO at the moment sets WRITE and PASSIVE mode only
     pub fn set_report_mode(&mut self) -> Result<(), Error> {
         let read = false;
         let active = false;
@@ -110,6 +118,7 @@ impl SDS011 {
         Ok(())
     }
 
+    /// Reads data from the sensor and returns as `Message`
     pub fn query(&mut self) -> Option<Message> {
         let mut cmd = self.cmd_begin();
 
@@ -138,6 +147,7 @@ impl SDS011 {
         }
     }
 
+    /// Returns command header and command ID bytes
     pub fn cmd_begin(&self) -> Vec<u8> {
         let mut vec = Vec::new();
         vec.push(HEAD);
@@ -145,7 +155,12 @@ impl SDS011 {
         vec
     }
 
+    /// Sets working period
+    /// `work_time` must be between 0 and 30
     pub fn set_work_period(&mut self, work_time: u8) -> Result<(), Error> {
+        if work_time > 30 {
+            return Err(Error::new(ErrorKind::InvalidInput, "work_time must be less than 30"));
+        }
         let read = false;
         let mut cmd = self.cmd_begin();
 
