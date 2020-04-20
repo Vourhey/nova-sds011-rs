@@ -1,6 +1,6 @@
 [package]
 name = "sds011"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Vadim Manaenko <vadim.razorq@gmail.com>"]
 description = "SDS011 driver"
 license-file = "LICENSE"
@@ -14,5 +14,6 @@ name = "sds011"
 [dependencies]
 serialport = "3.3.0"
 serde = { version = "1.0.106", features = ["derive"] }
+csv = "1.1"
 
 clap = "2.33.0"
