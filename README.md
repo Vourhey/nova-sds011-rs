@@ -9,7 +9,7 @@ Look at [sds011.rs](src/bin/sds011.rs)
 ## Help
 
 ```
-SDS011 Driver 0.1.0
+SDS011 Driver 0.1.3
 Vadim Manaenko <vadim.razorq@gmail.com>
 Reads data from Nova SDS011 Sensor
 

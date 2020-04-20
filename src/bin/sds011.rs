@@ -7,7 +7,7 @@ use std::thread::sleep;
 
 fn main() {
     let matches = App::new("SDS011 Driver")
-        .version("0.1.2")
+        .version("0.1.3")
         .author("Vadim Manaenko <vadim.razorq@gmail.com>")
         .about("Reads data from Nova SDS011 Sensor")
         .arg(Arg::with_name("port")
