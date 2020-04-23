@@ -33,9 +33,8 @@ fn main() {
             sensor.set_work_period(work_period).unwrap();
 
             loop {
-                let message = sensor.query();
-                if message.is_some() {
-                    println!("{:?}", message);
+                if let Ok(m) = sensor.query()  {
+                    println!("{:?}", m);
                 }
 
                 sleep(Duration::from_secs(work_period as u64 * 60));
