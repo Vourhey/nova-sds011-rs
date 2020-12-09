@@ -1,10 +1,11 @@
-use serialport::{SerialPort, SerialPortSettings, DataBits, FlowControl, Parity, StopBits, Error, ErrorKind};
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime};
-use std::mem::transmute;
+use serialport::{DataBits, FlowControl, Parity, SerialPort, SerialPortSettings, StopBits};
 use std::iter::FromIterator;
+use std::mem::transmute;
+use std::time::{Duration, SystemTime};
 
-pub type Result<T> = std::result::Result<T, Error>;
+mod error;
+pub use error::*;
 
 const HEAD: u8 = b'\xaa';
 const TAIL: u8 = b'\xab';
@@ -62,11 +63,17 @@ pub struct SDS011 {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Message {
     /// A timestamp in UNIX format
-    timestamp: String,
+    pub timestamp: String,
     /// PM2.5 particles
-    pm25: f32,
+    pub pm25: f32,
     /// PM10 particles
-    pm10: f32,
+    pub pm10: f32,
+}
+
+impl std::fmt::Display for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "[{}] PM10={} PM25={}", self.timestamp, self.pm10, self.pm25)
+    }
 }
 
 impl SDS011 {
@@ -93,8 +100,8 @@ impl SDS011 {
                 let mut s = SDS011 { port: o };
                 s.set_report_mode()?;
                 Ok(s)
-            },
-            Err(e) => Err(e)
+            }
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -127,8 +134,7 @@ impl SDS011 {
         self.finish_cmd(&mut cmd);
         self.execute(&cmd)?;
 
-
-        let raw =  self.get_reply()?;
+        let raw = self.get_reply()?;
 
         let pm25_ar = [raw[2], raw[3]];
         let pm10_ar = [raw[4], raw[5]];
@@ -136,10 +142,14 @@ impl SDS011 {
         let pm10: u16 = unsafe { transmute::<[u8; 2], u16>(pm10_ar) }.to_le();
 
         Ok(Message {
-                    timestamp: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs().to_string(),
-                    pm25: pm25 as f32 / 10.0,
-                    pm10: pm10 as f32 / 10.0,
-                })
+            timestamp: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                .to_string(),
+            pm25: pm25 as f32 / 10.0,
+            pm10: pm10 as f32 / 10.0,
+        })
     }
 
     /// Returns command header and command ID bytes
@@ -154,7 +164,7 @@ impl SDS011 {
     /// `work_time` must be between 0 and 30
     pub fn set_work_period(&mut self, work_time: u8) -> Result<()> {
         if work_time > 30 {
-            return Err(Error::new(ErrorKind::InvalidInput, "work_time must be less than 30"));
+            return Err(Error::TooLongWorkTime);
         }
         let read = false;
         let mut cmd = self.cmd_begin();
@@ -170,9 +180,9 @@ impl SDS011 {
         Ok(())
     }
 
-    fn finish_cmd(&self, cmd: &mut Vec<u8>)  {
-        let id1=b'\xff';
-        let id2=b'\xff';
+    fn finish_cmd(&self, cmd: &mut Vec<u8>) {
+        let id1 = b'\xff';
+        let id2 = b'\xff';
 
         cmd.push(id1);
         cmd.push(id2);
@@ -185,7 +195,7 @@ impl SDS011 {
         checksum = checksum % 256;
 
         cmd.push(checksum as u8);
-        cmd.push( TAIL);
+        cmd.push(TAIL);
     }
 
     fn execute(&mut self, cmd_bytes: &Vec<u8>) -> Result<()> {
@@ -195,27 +205,23 @@ impl SDS011 {
 
     fn get_reply(&mut self) -> Result<[u8; 10]> {
         let mut buf = [0u8; 10];
+        self.port.read_exact(buf.as_mut())?;
 
-        return match self.port.read_exact(buf.as_mut()) {
-            Ok(_) => {
-                let data = &buf[2..8];
-                if data.len() == 0 {
-                    return Err(Error::new(ErrorKind::InvalidInput, "Length of data is 0"));
-                }
-
-                let mut checksum: u32 = 0;
-                for i in data.iter() {
-                    checksum += *i as u32;
-                }
-                checksum = checksum & 255;
-
-                if checksum as u8 != buf[8] {
-                    return Err(Error::new(ErrorKind::InvalidInput, "Checksum doesn't match"));
-                }
-
-                Ok(buf)
-            },
-            Err(e) => Err(Error::from(e)),
+        let data = &buf[2..8];
+        if data.len() == 0 {
+            return Err(Error::EmptyDataFrame);
         }
+
+        let mut checksum: u32 = 0;
+        for i in data.iter() {
+            checksum += *i as u32;
+        }
+        checksum = checksum & 255;
+
+        if checksum as u8 != buf[8] {
+            return Err(Error::BadChecksum);
+        }
+
+        Ok(buf)
     }
 }
