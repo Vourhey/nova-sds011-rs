@@ -44,6 +44,7 @@ fn main() {
                 sleep(Duration::from_secs(work_period as u64 * 60));
             }
         }
-        Err(e) => println!("{:?}", e.description),
+        //Err(e) => println!("{:?}", e.description),
+        Err(e) => println!("{:?}", e),
     };
 }
